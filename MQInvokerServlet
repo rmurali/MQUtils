@@ -1,0 +1,91 @@
+
+
+import java.io.IOException;
+
+import javax.jms.Connection;
+import javax.jms.Destination;
+import javax.jms.MessageProducer;
+import javax.jms.Session;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.ibm.jms.JMSTextMessage;
+import com.ibm.msg.client.jms.JmsConnectionFactory;
+import com.ibm.msg.client.jms.JmsFactoryFactory;
+import com.ibm.msg.client.wmq.WMQConstants;
+
+/**
+ * Servlet implementation class MQInvokerServlet
+ * A utility for sending messages to a queue on a Websphere MQ queue manager from a servlet hosted within 
+  * Websphere Application Server. 
+ */
+
+public class MQInvokerServlet extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+
+    /**
+     * Default constructor. 
+     */
+    public MQInvokerServlet() {
+     
+    }
+
+
+	
+	public void init(ServletConfig config) throws ServletException {
+    	
+		try {
+			String messageContent = "TESTMESSAGE";
+			System.out.println("MQINVOKERSERVLET STARTING");
+
+
+			JmsFactoryFactory ff = JmsFactoryFactory
+					.getInstance(WMQConstants.WMQ_PROVIDER);
+			JmsConnectionFactory cf = ff.createConnectionFactory();
+
+			// Set the properties
+
+			cf.setStringProperty(WMQConstants.WMQ_HOST_NAME,
+					“<HOSTNAME>”);
+
+			cf.setIntProperty(WMQConstants.WMQ_PORT, 1414);
+
+			cf.setStringProperty(WMQConstants.WMQ_CHANNEL, "K9.CLIENTS");
+			cf.setIntProperty(WMQConstants.WMQ_CONNECTION_MODE,
+					WMQConstants.WMQ_CM_CLIENT);
+
+			cf.setStringProperty(WMQConstants.WMQ_QUEUE_MANAGER, “<QUEUEMANAGER>”);
+
+			Connection connection = cf.createConnection();
+			Session session = connection.createSession(false,
+					Session.AUTO_ACKNOWLEDGE);
+			Destination destination = session
+					.createQueue("queue://<QueueManager>/<QUEUENAME>“);
+			
+			MessageProducer producer = session.createProducer(destination);
+
+			System.out.println("SENDING MQ MESSAGE");
+
+			JMSTextMessage message = (JMSTextMessage) session
+					.createTextMessage(messageContent);
+             
+			connection.start();
+
+			long before = System.currentTimeMillis();
+			producer.send(message);
+			System.out.println("Sent message: in " + (System.currentTimeMillis() - before));
+
+			producer.close();
+			session.close();
+			connection.close();
+
+			System.out.println("\\nSUCCESS\\n");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+}

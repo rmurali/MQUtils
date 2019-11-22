@@ -1,0 +1,104 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+import javax.jms.Connection;
+import javax.jms.Destination;
+import javax.jms.JMSException;
+import javax.jms.MessageProducer;
+import javax.jms.Queue;
+import javax.jms.Session;
+
+import com.ibm.jms.JMSMessage;
+import com.ibm.jms.JMSTextMessage;
+import com.ibm.mq.jms.JMSC;
+import com.ibm.mq.jms.MQQueue;
+import com.ibm.mq.jms.MQQueueConnection;
+import com.ibm.mq.jms.MQQueueConnectionFactory;
+import com.ibm.mq.jms.MQQueueReceiver;
+import com.ibm.mq.jms.MQQueueSender;
+import com.ibm.mq.jms.MQQueueSession;
+import com.ibm.msg.client.jms.JmsConnectionFactory;
+import com.ibm.msg.client.jms.JmsFactoryFactory;
+import com.ibm.msg.client.wmq.WMQConstants;
+
+/**
+ * Standalone Java utility for sending messages to a queue hosted on Websphere
+ * MQ.
+ *
+ */
+public class MQSender {
+
+	private static String readFile(String fileName) throws IOException {
+		BufferedReader br = new BufferedReader(new FileReader(fileName));
+		try {
+			StringBuilder sb = new StringBuilder();
+			String line = br.readLine();
+
+			while (line != null) {
+				sb.append(line);
+				sb.append("\n");
+				line = br.readLine();
+			}
+			return sb.toString();
+		} finally {
+			br.close();
+		}
+	}
+
+	/**
+	 * Main method
+	 *
+	 * @param args
+	 */
+	public static void main(String[] args) {
+    try {
+
+      
+      JmsFactoryFactory ff = JmsFactoryFactory
+    		  .getInstance(WMQConstants.WMQ_PROVIDER); 
+    		  JmsConnectionFactory cf =  ff.createConnectionFactory();
+
+    		// Set the properties
+    		  
+    		  cf.setStringProperty(WMQConstants.WMQ_HOST_NAME, “<HOSTNAME>”);
+    		
+    		  cf.setIntProperty(WMQConstants.WMQ_PORT, 1414);
+    		 
+    		  cf.setStringProperty(WMQConstants.WMQ_CHANNEL, “<CHANNEL>”);
+    		  cf.setIntProperty(WMQConstants.WMQ_CONNECTION_MODE,
+    		  WMQConstants.WMQ_CM_CLIENT);
+    		 
+    		  cf.setStringProperty(WMQConstants.WMQ_QUEUE_MANAGER, “<QUEUEMANGER>”); 
+    		  
+      
+      
+      Connection connection = (Connection) cf.createConnection();
+      Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+      Queue queue = session.createQueue(“<QUEUENAME>“);
+      MessageProducer sender =  session.createProducer(queue);
+    
+
+      String payload = readFile(“<FILENAME>”);
+      JMSTextMessage message = (JMSTextMessage) session.createTextMessage(payload);   
+      
+      
+
+      // Start the connection
+      connection.start();
+
+      sender.send(message);
+      System.out.println("Sent message:\\n" + message);
+
+      sender.close();
+      session.close();
+      connection.close();
+
+     
+    }
+    catch (Exception ex) {
+      ex.printStackTrace();	
+  
+    }
+  }
+}
